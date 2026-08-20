@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;700&family=Silkscreen:wght@400;700&family=Space+Grotesk:wght@300;400;500&display=swap" rel="stylesheet">
+<title>Aura — Systems you can defend</title>
+<style>
+:root{
+  --ink:#cfe8df; --accent:#6ee7c8; --amber:#e5b364;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --serif:'Instrument Serif',Georgia,serif;
+  --pixel:'Silkscreen','JetBrains Mono',monospace;
+  --sans:'Space Grotesk',-apple-system,system-ui,sans-serif;
+  --line:rgba(110,231,200,.14);
+  --dim:rgba(207,232,223,.62);
+  /* Screen box, measured from the plate rather than eyeballed. */
+  --scr-l:29.5%; --scr-t:22.3%; --scr-w:39.5%; --scr-h:57.1%;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:auto}
+body{background:#05070a;color:var(--ink);font-family:var(--mono);overflow-x:hidden}
+
+/* Scroll track: its height IS the timeline. */
+.track{height:820vh;position:relative}
+.stage{position:sticky;top:0;height:100vh;overflow:hidden;background:#05070a}
+
+.layer{
+  position:absolute;inset:-6%;                 /* bleed, so parallax never exposes an edge */
+  background-repeat:no-repeat;background-position:center;background-size:cover;
+  will-change:transform,opacity;
+}
+/* Black is transparent: this is why the plates need black backgrounds and
+   empty centres — no alpha cutouts anywhere in this stack. */
+.blend{mix-blend-mode:screen}
+
+#interior  {background-image:url('layers/graded/03-interior.jpg')}
+#hardware  {background-image:url('layers/graded/02-hardware.jpg')}
+#board     {background-image:url('layers/graded/01-motherboard.jpg')}
+
+/* The destination scene. */
+#monitor{
+  position:absolute;inset:0;display:grid;place-items:center;opacity:0;
+  will-change:transform,opacity;
+}
+#monitor .shell{
+  position:relative;width:min(96vw,150vh);aspect-ratio:1376/768;
+  background:url('layers/graded/04-crt-monitor.jpg') center/contain no-repeat;
+}
+/* Phosphor glow, clipped to the measured screen rectangle. */
+#monitor .glass{position:absolute;left:var(--scr-l);top:var(--scr-t);width:var(--scr-w);height:var(--scr-h);
+  background:radial-gradient(ellipse at 50% 42%, #0d2a22 0%, #061511 60%, #030b09 100%);opacity:0;border-radius:6% / 9%}
+#monitor .glow{
+  position:absolute;left:var(--scr-l);top:var(--scr-t);width:var(--scr-w);height:var(--scr-h);
+  background:url('layers/graded/05-screen-glow.jpg') center/cover;
+  mix-blend-mode:screen;opacity:0;border-radius:6% / 9%;
+}
+/* Real DOM text over the plate — crisp at any zoom, and it can animate.
+   Generated terminal text comes back garbled and cannot be edited. */
+#monitor .term{
+  position:absolute;left:var(--scr-l);top:var(--scr-t);width:var(--scr-w);height:var(--scr-h);
+  padding:3.2% 4%;font-size:clamp(7px,1.25vh,15px);line-height:1.6;
+  color:#c9ffe9;text-shadow:0 0 4px rgba(125,255,212,.95),0 0 12px rgba(110,231,200,.55);
+  overflow:hidden;opacity:0;
+}
+#monitor .term .p{color:#ffd489;text-shadow:0 0 5px rgba(229,179,100,.9)}
+#monitor .term .d{opacity:.78}
+#monitor .cur{display:inline-block;width:.62em;height:1.02em;vertical-align:-.16em;
+  background:#c9ffe9;box-shadow:0 0 8px rgba(125,255,212,.9);animation:blink 1.05s steps(1,end) infinite}
+@keyframes blink{50%{opacity:0}}
+/* Scanlines drawn in CSS rather than baked into the bitmap, so they stay
+   one physical pixel regardless of scale. */
+#monitor .lines{
+  position:absolute;left:var(--scr-l);top:var(--scr-t);width:var(--scr-w);height:var(--scr-h);
+  background:repeating-linear-gradient(180deg,rgba(0,0,0,.34) 0 1px,transparent 1px 3px);
+  mix-blend-mode:multiply;opacity:0;border-radius:6% / 9%;
+}
+.words{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;z-index:3}
+.word{position:absolute;text-align:center;opacity:0;will-change:transform,opacity;width:min(1240px,94vw)}
+.word > p{
+  margin:20px auto 0;max-width:52ch;padding:0 4vw;box-sizing:border-box;font-family:var(--sans);font-weight:300;letter-spacing:0;
+  font-size:clamp(13px,1.42vw,16.5px);line-height:1.72;color:rgba(207,232,223,.72);
+}
+/* A well behind each word too, so the sentence stays readable on the board. */
+.word::before{
+  content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:150%;height:200%;z-index:-1;border-radius:50%;
+  background:radial-gradient(ellipse at center, rgba(3,6,9,.9) 0%, rgba(3,6,9,.66) 46%, rgba(3,6,9,0) 72%);
+}
+.word span{
+  display:block;font-family:var(--pixel);font-weight:700;color:#f4fffb;
+  font-size:clamp(30px,7.4vw,120px);letter-spacing:.22em;margin-right:-.22em;white-space:nowrap;
+  text-shadow:0 0 26px rgba(110,231,200,.5),0 0 70px rgba(56,152,255,.28);
+}
+.word em{
+  display:block;margin-top:22px;font-family:var(--mono);font-style:normal;
+  font-size:clamp(11px,1.35vw,15px);letter-spacing:.2em;text-transform:uppercase;
+  color:rgba(207,232,223,.66);
+}
+.word.w-aura span{font-size:clamp(54px,12.5vw,212px);letter-spacing:.3em;margin-right:-.3em;line-height:1}
+.word.w-aura{width:min(1240px,94vw)}
+/* A soft well behind the hero so the copy never fights the circuit board. */
+.word.w-aura::before{
+  content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:150%;height:190%;z-index:-1;border-radius:50%;
+  background:radial-gradient(ellipse at center, rgba(3,6,9,.92) 0%, rgba(3,6,9,.72) 45%, rgba(3,6,9,0) 72%);
+}
+.word.w-aura em{margin-top:26px;font-size:clamp(11px,1.5vw,16px);color:var(--accent);letter-spacing:.26em}
+.word.w-aura p{
+  margin:22px auto 0;max-width:54ch;font-family:var(--sans);font-weight:300;
+  font-size:clamp(13.5px,1.5vw,17.5px);line-height:1.72;color:rgba(207,232,223,.76);letter-spacing:0;
+}
+.word.w-aura .meta{
+  display:flex;flex-wrap:wrap;gap:10px 26px;justify-content:center;margin-top:26px;
+  font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:rgba(207,232,223,.5);
+}
+.word.w-aura .meta i{font-style:normal;display:flex;align-items:center;gap:9px}
+.word.w-aura .meta i::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--accent);opacity:.8}
+.word.w-aura .cta-row{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:34px}
+.word.w-aura .cta-row a{
+  font-family:var(--mono);font-size:12.5px;text-decoration:none;padding:12px 20px;border-radius:7px;
+  border:1px solid var(--line);color:#dff1ea;transition:border-color .2s,color .2s,background .2s;
+}
+.word.w-aura .cta-row a:first-child{background:rgba(110,231,200,.1);border-color:rgba(110,231,200,.4);color:var(--accent)}
+.word.w-aura .cta-row a:hover{border-color:var(--accent);color:var(--accent)}
+.vig{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse at center,transparent 42%,rgba(5,7,10,.72) 100%)}
+
+/* Persistent machine texture behind every section, so the site reads as
+   sitting on the hardware rather than replacing it. Static gradients and one
+   screen-blended plate — no blur(), which is what made the last build stutter. */
+.bg-persist{
+  position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0;
+  background:
+    radial-gradient(60vw 60vw at 12% 8%, rgba(45,226,214,.10), transparent 62%),
+    radial-gradient(56vw 56vw at 88% 22%, rgba(56,152,255,.09), transparent 62%),
+    radial-gradient(52vw 52vw at 18% 92%, rgba(255,74,168,.07), transparent 62%),
+    radial-gradient(58vw 58vw at 82% 88%, rgba(255,140,50,.06), transparent 62%),
+    #05070a;
+  transition:opacity .5s linear;
+}
+.bg-persist::after{
+  content:'';position:absolute;inset:0;
+  background:url('layers/graded/01-motherboard.jpg') center/cover no-repeat;
+  mix-blend-mode:screen;opacity:.10;
+}
+
+/* Nav arrives with the content, not during the intro. */
+.nav{
+  position:fixed;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;
+  justify-content:space-between;gap:24px;padding:16px clamp(18px,4vw,48px);
+  font-family:var(--mono);font-size:12px;letter-spacing:.06em;
+  background:rgba(5,7,10,.72);border-bottom:1px solid transparent;
+  opacity:0;transform:translateY(-100%);transition:opacity .45s ease,transform .45s ease,border-color .45s;
+}
+.nav.on{opacity:1;transform:none;border-bottom-color:var(--line)}
+.brand{display:flex;align-items:center;gap:9px;color:#eaf5f1;text-decoration:none;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
+.brand .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.links{display:flex;gap:26px}
+.links a{color:var(--dim);text-decoration:none;transition:color .2s}
+.links a:hover{color:var(--accent)}
+.cta{color:#05070a;background:var(--accent);text-decoration:none;padding:8px 15px;border-radius:6px;font-weight:500}
+.cta:hover{background:#8ff5dc}
+@media(max-width:760px){.links{display:none}}
+
+#content{
+  position:relative;z-index:5;opacity:0;transform:translateY(28px);
+  will-change:opacity,transform;font-family:var(--sans);
+  /* Pull the site up over the final viewport of the intro. Without this the
+     sticky stage releases and the monitor visibly scrolls away before the
+     content arrives, which breaks the illusion of being pulled into the
+     screen — the site has to appear *in* it, not after it. */
+  margin-top:-100vh;
+}
+.band{max-width:1120px;margin:0 auto;padding:clamp(60px,10vh,120px) clamp(18px,4vw,48px);position:relative}
+.statement{max-width:1120px;margin:0 auto;padding:22vh clamp(18px,4vw,48px) 12vh}
+.kicker{font-family:var(--mono);font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--accent);margin-bottom:22px}
+h1{font-family:var(--serif);font-size:clamp(34px,6.4vw,86px);line-height:1.02;color:#f2fbf8;font-weight:400;letter-spacing:-.015em;margin-bottom:26px}
+h1 em{display:block;font-style:italic;color:var(--accent)}
+.lede{max-width:58ch;font-size:clamp(15px,1.55vw,19px);line-height:1.72;color:var(--dim);font-weight:300}
+.row{display:flex;flex-wrap:wrap;gap:12px;margin-top:38px}
+.btn{font-family:var(--mono);font-size:12.5px;text-decoration:none;padding:12px 20px;border-radius:7px;
+  border:1px solid var(--line);color:#dff1ea;transition:border-color .2s,background .2s,color .2s}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:rgba(110,231,200,.1);border-color:rgba(110,231,200,.4);color:var(--accent)}
+.btn.primary:hover{background:rgba(110,231,200,.18)}
+
+.sec{font-family:var(--mono);font-size:11px;letter-spacing:.3em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:36px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+
+.sec-lede{max-width:62ch;margin:-18px 0 44px;font-size:clamp(14px,1.5vw,18px);line-height:1.7;color:var(--dim);font-weight:300}
+.probs{list-style:none;counter-reset:none;display:grid;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.probs li{display:flex;gap:clamp(16px,3vw,38px);background:rgba(5,7,10,.86);padding:clamp(24px,3.4vw,38px)}
+.pn{font-family:var(--mono);font-size:12px;color:var(--accent);opacity:.7;padding-top:6px;min-width:26px}
+.probs h3{font-family:var(--serif);font-size:clamp(22px,2.9vw,34px);font-weight:400;color:#f2fbf8;margin-bottom:12px;line-height:1.15}
+.probs p{max-width:64ch;font-size:14.5px;line-height:1.72;color:var(--dim);font-weight:300}
+.probs .ans{margin-top:14px;font-family:var(--mono);font-size:13px;color:var(--accent);line-height:1.6;
+  padding-left:15px;border-left:2px solid rgba(110,231,200,.45)}
+@media(max-width:620px){.probs li{flex-direction:column;gap:10px}}
+.stack{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1px;background:var(--line)}
+.stack article{background:#05070a;padding:30px 26px}
+.stack .n{font-family:var(--mono);font-size:11px;color:var(--accent);opacity:.7}
+.stack h3{font-family:var(--serif);font-size:26px;font-weight:400;color:#eaf5f1;margin:10px 0 12px}
+.stack p{font-size:14px;line-height:1.7;color:var(--dim);font-weight:300}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.card{padding:28px;border:1px solid var(--line);border-radius:12px;background:rgba(5,7,10,.78);
+  transition:border-color .25s,transform .25s,background .25s}
+.card:hover{border-color:rgba(110,231,200,.34);transform:translateY(-3px);background:rgba(9,14,19,.88)}
+.card h3{font-family:var(--mono);font-size:16px;font-weight:500;color:#eaf5f1;margin-bottom:5px}
+.card .tag{font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:14px;letter-spacing:.04em}
+.card p{font-size:13.5px;line-height:1.68;color:var(--dim);font-weight:300}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:20px}
+.stats div{padding:26px 22px;border:1px solid var(--line);border-radius:12px;background:rgba(5,7,10,.78)}
+.stats b{display:block;font-family:var(--serif);font-size:clamp(34px,4.4vw,54px);font-weight:400;color:var(--accent);line-height:1}
+.stats span{display:block;margin-top:9px;font-size:12.5px;color:var(--dim);line-height:1.5}
+.note{margin-top:30px;font-family:var(--mono);font-size:13px;color:var(--dim);
+  padding-left:16px;border-left:2px solid var(--accent)}
+
+.contact{text-align:center}
+.contact .lede{margin:0 auto}
+.contact .row{justify-content:center}
+.big{font-family:var(--serif);font-size:clamp(40px,7.4vw,96px);font-weight:400;color:#f2fbf8;line-height:1;margin-bottom:22px}
+
+.foot{max-width:1120px;margin:0 auto;padding:34px clamp(18px,4vw,48px) 60px;
+  border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:14px;
+  justify-content:space-between;font-family:var(--mono);font-size:11.5px;color:rgba(207,232,223,.45)}
+.foot .mono{color:var(--accent);opacity:.75}
+
+.skip{
+  position:fixed;top:18px;right:clamp(18px,4vw,48px);z-index:30;
+  font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;
+  color:rgba(207,232,223,.62);background:rgba(5,7,10,.6);cursor:pointer;
+  border:1px solid var(--line);border-radius:6px;padding:9px 14px;
+  transition:opacity .35s,color .2s,border-color .2s;
+}
+.skip:hover{color:var(--accent);border-color:var(--accent)}
+.skip[hidden]{display:none}
+.hint{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);
+  font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:rgba(207,232,223,.5);
+  transition:opacity .4s}
+@media (prefers-reduced-motion:reduce){.layer,#monitor{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="track">
+  <div class="stage">
+    <div class="layer blend" id="interior"></div>
+    <div class="layer blend" id="hardware"></div>
+    <div class="layer blend" id="board"></div>
+    <div class="words" aria-hidden="true">
+      <div class="word w-aura">
+        <span>AURA</span>
+        <em>agent systems you can defend</em>
+        <p>A runtime whose loop checks its own work, with memory that outlives the session — plus the clients that drive it and the harness that proves it holds up.</p>
+        <div class="meta"><i>320-question harness</i><i>50-day public trial</i><i>open source</i></div>
+        <div class="cta-row"><a href="#ecosystem">See the ecosystem</a><a href="#evidence">Read the evidence</a></div>
+      </div>
+      <div class="word" data-i="1"><span>LOOP</span><em>it runs, checks, and runs again</em>
+        <p>Every answer is checked against evidence before it reaches you. When a check fails the agent does the work again, rather than handing you something it cannot defend.</p>
+      </div>
+      <div class="word" data-i="2"><span>MEMORY</span><em>what it learned last time is still there</em>
+        <p>What the agent worked out yesterday is still there today. You stop re-explaining your own process every session, and the work finally starts to compound.</p>
+      </div>
+      <div class="word" data-i="3"><span>ARCHIMEDES</span><em>a small model that learns your work</em>
+        <p>A small model does the work and a verification layer catches what it gets wrong. Every correction becomes training data, so with enough passes you end up with your own fine-tuned model — one that knows your habits, your projects and your standards.</p>
+      </div>
+    </div>
+    <div id="monitor">
+      <div class="shell">
+        <div class="glass"></div>
+        <div class="glow"></div>
+        <div class="lines"></div>
+        <div class="term"><span id="tt"></span><span class="cur" id="cur"></span></div>
+        </div>
+      </div>
+    </div>
+    <div class="vig"></div>
+  </div>
+</div>
+<div class="hint">scroll</div>
+<button class="skip" id="skip" type="button">Skip intro →</button>
+
+<div class="bg-persist" aria-hidden="true"></div>
+
+<header class="nav" id="nav">
+  <a class="brand" href="#top"><span class="dot"></span>aura</a>
+  <nav class="links">
+    <a href="#problem">Problem</a>
+    <a href="#stack">Stack</a>
+    <a href="#ecosystem">Ecosystem</a>
+    <a href="#evidence">Evidence</a>
+    <a href="#contact">Contact</a>
+  </nav>
+  <a class="cta" href="#contact">Get access</a>
+</header>
+
+<main id="content">
+  <section class="statement">
+    <p class="kicker">aura · agent systems</p>
+    <h1>Everything above ran on a machine.<em>This is what it produced.</em></h1>
+    <p class="lede">An agent runtime, the clients that drive it, and an evaluation harness that says whether any of it actually works. Built and measured in the open.</p>
+    <div class="row">
+      <a class="btn primary" href="#ecosystem">See the ecosystem</a>
+      <a class="btn" href="#evidence">Read the evidence</a>
+    </div>
+  </section>
+
+  <section id="problem" class="band">
+    <h2 class="sec">The problem</h2>
+    <p class="sec-lede">Organisations adopt AI on anecdote and abandon it on anecdote. Four ways that goes wrong — and what answers each.</p>
+    <ol class="probs">
+      <li>
+        <span class="pn">01</span>
+        <div>
+          <h3>&ldquo;It felt better.&rdquo;</h3>
+          <p>No baseline, no rubric, no before-and-after. When the only evidence is an impression, the first bad week ends the project — and nobody can say whether it was ever working.</p>
+          <p class="ans">A 320-question harness pointed at your own domain, re-run on every change.</p>
+        </div>
+      </li>
+      <li>
+        <span class="pn">02</span>
+        <div>
+          <h3>&ldquo;It forgot.&rdquo;</h3>
+          <p>Every session starts from zero. What the agent worked out yesterday is gone, so the same ground gets re-explained forever and nothing compounds.</p>
+          <p class="ans">Memory that outlives the session, carried between runs.</p>
+        </div>
+      </li>
+      <li>
+        <span class="pn">03</span>
+        <div>
+          <h3>&ldquo;I can&rsquo;t defend this.&rdquo;</h3>
+          <p>An answer you cannot explain does not survive a room that pushes back. The hard skill is not producing output — it is standing behind it.</p>
+          <p class="ans">A loop that checks its own work and shows what it checked.</p>
+        </div>
+      </li>
+      <li>
+        <span class="pn">04</span>
+        <div>
+          <h3>&ldquo;Which model, though?&rdquo;</h3>
+          <p>Every release resets your judgement, and the comparisons on offer are marketing. Choosing on benchmarks you did not run is guessing with extra steps.</p>
+          <p class="ans">One bridge, every provider, measured on your work rather than theirs.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section id="stack" class="band">
+    <h2 class="sec">The stack</h2>
+    <div class="stack">
+      <article><span class="n">01</span><h3>Runtime</h3><p>The agent loop itself — tool calls, permission gates, multi-agent delegation. Everything else is a client onto this.</p></article>
+      <article><span class="n">02</span><h3>Clients</h3><p>Desktop, mobile and chat surfaces that drive the same loop over high-performance transports, not reimplementations of it.</p></article>
+      <article><span class="n">03</span><h3>Harness</h3><p>A benchmark you can point at your own domain, with rubrics you write, re-run on every change.</p></article>
+      <article><span class="n">04</span><h3>Evidence</h3><p>Longitudinal results published as they come in. Measured before-and-after, not impressions.</p></article>
+    </div>
+  </section>
+
+  <section id="ecosystem" class="band">
+    <h2 class="sec">Ecosystem</h2>
+    <div class="grid">
+      <article class="card">
+        <h3>aura-code</h3><p class="tag">Agent runtime</p>
+        <p>The core loop — tool calling, permission models, MCP integrations and multi-agent delegation.</p>
+      </article>
+      <article class="card">
+        <h3>aura-droid</h3><p class="tag">Native Android client</p>
+        <p>Kotlin client running the full agent loop on mobile over high-performance WebSocket transports.</p>
+      </article>
+      <article class="card">
+        <h3>agentmesh</h3><p class="tag">Visual workflow builder</p>
+        <p>Node-based canvas for assembling, configuring and executing multi-agent workflows without writing code.</p>
+      </article>
+      <article class="card">
+        <h3>enables</h3><p class="tag">Provider bridge</p>
+        <p>Runs the agent CLI against almost any upstream model provider — the practical lab for comparing models.</p>
+      </article>
+      <article class="card">
+        <h3>aura-pulse &amp; clients</h3><p class="tag">Tauri · Rust · Telegram</p>
+        <p>aura-mathetes desktop telemetry, aura-pulse benchmarks, and a Telegram voice agent.</p>
+      </article>
+      <article class="card">
+        <h3>Serbian Legal LLM</h3><p class="tag">Fine-tuning pipeline</p>
+        <p>~1,600 statutory acts and 11M+ cleaned words through supervised fine-tuning, plus Granite and Gemma pipelines.</p>
+      </article>
+    </div>
+  </section>
+
+  <section id="evidence" class="band">
+    <h2 class="sec">Evidence</h2>
+    <div class="stats">
+      <div><b>320</b><span>question evaluation harness</span></div>
+      <div><b>50</b><span>day public longitudinal trial</span></div>
+      <div><b>11M+</b><span>words in the legal corpus</span></div>
+      <div><b>6</b><span>stages, basecamp to build</span></div>
+    </div>
+    <p class="note">"I don't try. I verify." Every claim above resolves to something you can re-run yourself.</p>
+  </section>
+
+  <section id="contact" class="band contact">
+    <h2 class="big">Start the ascent.</h2>
+    <p class="lede">Individual cohorts, private in-house programmes, and AI adoption consulting for teams.</p>
+    <div class="row">
+      <a class="btn primary" href="https://leanproiq.com" target="_blank" rel="noopener">leanproiq.com</a>
+      <a class="btn" href="https://github.com/DusanCar-sudo" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>© 2026 Aura · Created &amp; architected by Dušan Milosavljević</span>
+    <span class="mono">evidence &gt; vibes</span>
+  </footer>
+</main>
+
+<script>
+const L={interior:document.getElementById('interior'),
+         hardware:document.getElementById('hardware'),
+         board:document.getElementById('board')};
+const mon=document.getElementById('monitor');
+const glass=mon.querySelector('.glass'), glow=mon.querySelector('.glow');
+const lines=mon.querySelector('.lines'), term=mon.querySelector('.term');
+const tt=document.getElementById('tt'), cur=document.getElementById('cur');
+const hint=document.querySelector('.hint');
+const content=document.getElementById('content');
+const nav=document.getElementById('nav');
+const bg=document.querySelector('.bg-persist');
+const words=[...document.querySelectorAll('.word')];
+const skip=document.getElementById('skip');
+const track=document.querySelector('.track');
+
+// The transcript, as tagged segments so the prompt can stay amber while the
+// output stays green. Typing is metered by scroll, not by a timer, so the
+// reader controls the pace and can scrub backwards.
+const SCRIPT=[
+  ['p','aura@machine'],['d',':~'],['x','$ boot --stage 06\n'],
+  ['d','· loading agent runtime ............ ok\n'],
+  ['d','· mounting evaluation harness ..... ok\n'],
+  ['d','· 320 checks queued\n\n'],
+  ['p','aura@machine'],['d',':~'],['x','$ verify\n'],
+  ['x','evidence > vibes\n\n'],
+  ['p','aura@machine'],['d',':~'],['x','$ open ./site\n'],
+  ['d','· handing off to the browser ...\n']
+];
+const TOTAL=SCRIPT.reduce((n,[,t])=>n+t.length,0);
+const esc=c=>c==='<'?'&lt;':c==='&'?'&amp;':c;
+let lastN=-1;
+function type(n){
+  if(n===lastN) return; lastN=n;
+  let left=n,out='';
+  for(const [cls,txt] of SCRIPT){
+    if(left<=0) break;
+    const take=txt.slice(0,left); left-=take.length;
+    const html=[...take].map(esc).join('').replace(/\n/g,'<br>');
+    out += cls==='x' ? html : `<span class="${cls}">${html}</span>`;
+  }
+  tt.innerHTML=out;
+}
+
+let mx=0,my=0,tmx=0,tmy=0,p=0,tp=0;
+addEventListener('mousemove',e=>{
+  tmx=(e.clientX/innerWidth)*2-1; tmy=(e.clientY/innerHeight)*2-1;
+},{passive:true});
+addEventListener('scroll',()=>{
+  const max=track.offsetHeight-innerHeight;
+  tp=max>0?Math.min(1,Math.max(0,scrollY/max)):0;
+},{passive:true});
+
+const clamp01=v=>v<0?0:v>1?1:v;
+const ss=(a,b,v)=>{const t=clamp01((v-a)/(b-a));return t*t*(3-2*t);};
+
+function frame(){
+  mx+=(tmx-mx)*.06; my+=(tmy-my)*.06; p+=(tp-p)*.09;
+
+  // PHASE 1 — the machine, three plates at different depths. It holds under
+  // the word sequence, so the letters read as rising out of the hardware.
+  const dep=[[L.interior,7,.30],[L.hardware,16,.62],[L.board,30,1.0]];
+  for(const [el,amp,rate] of dep){
+    const z=p*120*rate;
+    el.style.transform=
+      `translate3d(${(-mx*amp).toFixed(2)}px, ${(-my*amp*0.62 - z).toFixed(2)}px, 0) scale(${(1+p*0.22*rate).toFixed(4)})`;
+  }
+  const out=1-ss(0.700,0.790,p);
+  L.interior.style.opacity=out; L.hardware.style.opacity=out; L.board.style.opacity=out;
+
+  // PHASE 2 — the words. Each gets a window it fades up through, holds, and
+  // fades out of, drifting forward the whole time so it reads as coming out
+  // of the dark rather than being switched on.
+  const BANDS=[[0.015,0.200],[0.190,0.375],[0.365,0.550],[0.540,0.725]];
+  for(let i=0;i<words.length;i++){
+    const [a,b]=BANDS[i];
+    const t=clamp01((p-a)/(b-a));
+    let o=0;
+    // 16% fading in, 68% held at full, 16% fading out — the word sits
+    // legible for most of its band instead of always arriving or leaving.
+    if(t>0&&t<1) o=Math.min(1, Math.min(t/0.16,(1-t)/0.16));
+    words[i].style.opacity=o.toFixed(3);
+    // Links in the hero are real, so let it take clicks only while readable.
+    words[i].style.pointerEvents = o>0.55 ? 'auto' : 'none';
+    // Drift forward and track the pointer a little, so it sits in the scene.
+    const sc=0.88+t*0.20;
+    words[i].style.transform=
+      `translate3d(${(-mx*13).toFixed(2)}px,${(-my*9).toFixed(2)}px,0) scale(${sc.toFixed(4)})`;
+  }
+
+  // PHASE 3 — the monitor arrives.
+  const inn=ss(0.735,0.825,p);
+  const open=ss(0.935,0.975,p);
+  const monScale=(0.93+inn*0.07)*(1+open*3.1);
+  mon.style.opacity=(inn*(1-ss(0.960,0.995,p))).toFixed(3);
+  mon.style.transform=
+    `translate3d(${(-mx*9*(1-open)).toFixed(2)}px,${(-my*6*(1-open)).toFixed(2)}px,0) scale(${monScale.toFixed(4)})`;
+
+  // PHASE 4 — power on, then type. Typing is a pure function of scroll.
+  const on=ss(0.815,0.865,p);
+  glass.style.opacity=on.toFixed(3);
+  glow.style.opacity=(on*0.85).toFixed(3);
+  lines.style.opacity=(on*0.85*(1-ss(0.940,0.980,p))).toFixed(3);
+  term.style.opacity=(ss(0.845,0.880,p)*(1-ss(0.930,0.970,p))).toFixed(3);
+
+  const typed=ss(0.860,0.925,p);
+  type(Math.round(typed*TOTAL));
+  cur.style.opacity=(typed>0.001&&open<0.5)?1:0;
+
+  // PHASE 5 — the page itself. Keyed off raw scroll (tp), not the eased value:
+  // the sticky stage releases at a fixed scroll position, so if the reveal
+  // lagged behind an eased p, a fast flick would drop you into a black gap.
+  const rev=ss(0.955,0.992,tp);
+  content.style.opacity=rev.toFixed(3);
+  content.style.transform=`translateY(${((1-rev)*28).toFixed(1)}px)`;
+  content.style.pointerEvents=rev>0.9?'auto':'none';
+  bg.style.opacity=ss(0.940,0.985,tp).toFixed(3);
+  nav.classList.toggle('on', tp>0.96);
+
+  hint.style.opacity=(1-ss(0,0.04,p)).toFixed(2);
+  requestAnimationFrame(frame);
+}
+// Let people out of the intro, and remember that they have seen it. A ten
+// viewport preamble is a cost you pay once, not on every visit.
+function jumpToContent(){
+  const y=track.offsetHeight-innerHeight;
+  p=tp=1;                       // no rewind through the whole sequence
+  window.scrollTo({top:y,behavior:'auto'});
+  try{sessionStorage.setItem('aura-intro-seen','1');}catch(e){}
+}
+skip.addEventListener('click',jumpToContent);
+try{ if(sessionStorage.getItem('aura-intro-seen')==='1') jumpToContent(); }catch(e){}
+addEventListener('scroll',()=>{
+  const done=tp>0.93;
+  skip.style.opacity=done?'0':'1';
+  skip.hidden=done;
+  if(done){ try{sessionStorage.setItem('aura-intro-seen','1');}catch(e){} }
+},{passive:true});
+
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

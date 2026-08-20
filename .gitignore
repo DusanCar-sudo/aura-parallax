@@ -1,0 +1,11 @@
+# Credentials — never commit.
+.env
+.env.*
+
+# Ungraded source plates (3.4MB, unused by the page).
+# layers/graded/ IS tracked — index.html loads it.
+layers/*.jpg
+layers/src/
+
+.DS_Store
+.vercel

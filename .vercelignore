@@ -1,0 +1,8 @@
+# Never ship the credential.
+.env
+.env.*
+# Build-time only — not referenced by the page.
+scripts/
+prompts/
+# Ungraded source plates; index.html loads layers/graded/ only.
+layers/*.jpg
